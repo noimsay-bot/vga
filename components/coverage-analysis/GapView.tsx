@@ -13,7 +13,7 @@ export default function GapView({ categories }: { categories: CoverageCategory[]
         return (
           <section
             key={category.id}
-            className="rounded-xl border p-4"
+            className="gap-category-print rounded-xl border p-4"
             style={{ borderColor: C.border, background: C.panel }}
           >
             <div className="mb-2 flex items-center gap-3">

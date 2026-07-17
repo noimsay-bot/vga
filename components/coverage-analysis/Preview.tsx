@@ -151,7 +151,7 @@ export default function Preview({
         </div>
       ) : (
         <div className="space-y-6 print:space-y-0">
-          {selectedModes.map(([mode, label], index) => {
+          {selectedModes.map(([mode], index) => {
             const radarUnavailable = mode === "radar" && categories.length < 3;
             const breakAfter = index < selectedModes.length - 1;
             return (
@@ -165,7 +165,6 @@ export default function Preview({
                   asOf={asOf}
                   categories={categories}
                   totalShort={totalShort}
-                  visualizationLabel={label}
                 />
                 {radarUnavailable && (
                   <div
@@ -200,7 +199,6 @@ interface ReportHeaderProps {
   asOf: string;
   categories: CoverageCategory[];
   totalShort: number;
-  visualizationLabel: string;
 }
 
 function ReportHeader({
@@ -208,15 +206,11 @@ function ReportHeader({
   asOf,
   categories,
   totalShort,
-  visualizationLabel,
 }: ReportHeaderProps) {
   return (
     <header className="mb-5">
       <div className="mb-1 flex items-baseline justify-between gap-3">
         <div>
-          <div className="mb-1 text-xs font-semibold" style={{ color: C.brand }}>
-            {visualizationLabel}
-          </div>
           <h1 className="text-2xl font-extrabold tracking-tight">
             {clientName || "고객"} 님 보장분석
           </h1>

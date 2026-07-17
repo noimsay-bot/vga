@@ -34,7 +34,6 @@ export default function RadarView({ categories }: { categories: CoverageCategory
       style={{ borderColor: C.border, background: C.panel }}
     >
       <div className="mb-2 text-center">
-        <div className="font-bold">보장 균형 레이더</div>
         <div className="text-xs" style={{ color: C.muted }}>
           바깥 링은 카테고리별 필요 수준 100점입니다.
         </div>

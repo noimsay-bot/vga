@@ -31,4 +31,10 @@ button {
     break-after: page;
     page-break-after: always;
   }
+
+  .gap-category-print,
+  .gap-item-print {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
 }

@@ -15,7 +15,7 @@ export default function Gauge({ item }: GaugeProps) {
   const shortage = Math.max(item.needed - held, 0);
 
   return (
-    <div className="py-1.5">
+    <div className="gap-item-print py-1.5">
       <div className="flex items-baseline justify-between mb-1">
         <span className="text-sm" style={{ color: C.ink }}>
           {item.name}
