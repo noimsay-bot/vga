@@ -49,6 +49,16 @@ assert.deepEqual(
   ["테스트담보", "수동담보"],
 );
 
+const xlsBytes = XLSX.write(workbook, { bookType: "xls", type: "array" });
+const parsedXls = parseCoverageWorkbook(xlsBytes);
+assert.equal(parsedXls.headerErrors.length, 0);
+assert.equal(parsedXls.rows.length, 6);
+assert.equal(parsedXls.groups.length, 3);
+assert.equal(
+  parsedXls.groups.find((group) => group.name === "테스트담보")?.insurers.length,
+  2,
+);
+
 const csv = [
   "담보명,카테고리,보유,필요보장,보험사금액,보험사",
   "CSV담보,CSV보장,250,\"1,500\",,",
@@ -61,4 +71,4 @@ assert.equal(parsedCsv.groups[0].category, "CSV보장");
 assert.equal(parsedCsv.groups[0].needed, 1500);
 assert.equal(parsedCsv.groups[0].heldManual, 250);
 
-console.log("Excel/CSV parse, grouping, validation, and merge checks passed.");
+console.log("XLSX/XLS/CSV parse, grouping, validation, and merge checks passed.");

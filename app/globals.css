@@ -20,6 +20,13 @@ button {
 }
 
 @media print {
+  html,
+  body,
+  body * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
   .print-break-after-page {
     break-after: page;
     page-break-after: always;

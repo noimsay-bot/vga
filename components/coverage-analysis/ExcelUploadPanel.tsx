@@ -34,7 +34,7 @@ export default function ExcelUploadPanel({ onApply }: ExcelUploadPanelProps) {
       setFileName(file.name);
       setPreview(parsed);
     } catch {
-      setParseError("파일을 읽지 못했습니다. .xlsx 또는 .csv 형식과 헤더를 확인하세요.");
+      setParseError("파일을 읽지 못했습니다. .xlsx, .xls 또는 .csv 형식과 헤더를 확인하세요.");
     }
   };
 
@@ -55,7 +55,7 @@ export default function ExcelUploadPanel({ onApply }: ExcelUploadPanelProps) {
       <input
         ref={inputRef}
         type="file"
-        accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
+        accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"
         className="hidden"
         onChange={handleFile}
       />
