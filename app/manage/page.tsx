@@ -1,11 +1,19 @@
 "use client";
 
-import { Database, ShieldCheck } from "lucide-react";
+import { Database, FolderOpen, ShieldCheck } from "lucide-react";
 import { C } from "@/components/coverage-analysis/tokens";
 import { useProjects } from "@/components/projects/ProjectProvider";
+import { PROJECT_FILE_NAME } from "@/components/projects/projectStorage";
 
 export default function ManagePage() {
-  const { projects } = useProjects();
+  const {
+    projects,
+    storageMode,
+    storageFolderName,
+    storageError,
+    directoryStorageSupported,
+    changeStorageFolder,
+  } = useProjects();
 
   return (
     <div className="mx-auto max-w-5xl p-5 md:p-8">
@@ -16,11 +24,25 @@ export default function ManagePage() {
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         <div className="rounded-xl border p-5" style={{ background: C.panel, borderColor: C.border }}>
           <Database size={22} style={{ color: C.brand }} />
-          <div className="mt-3 font-bold">로컬 프로젝트</div>
+          <div className="mt-3 font-bold">고객정보 저장</div>
           <div className="mt-1 text-2xl font-extrabold">{projects.length}개</div>
           <p className="mt-2 text-xs" style={{ color: C.muted }}>
-            현재는 메모리 상태이며 새로고침하면 초기화됩니다. Supabase 저장은 다음 단계입니다.
+            {storageMode === "directory"
+              ? `${storageFolderName} 폴더의 ${PROJECT_FILE_NAME}에 자동 저장됩니다.`
+              : "고객정보를 저장할 로컬 폴더를 설정해 주세요."}
           </p>
+          {storageError && <p className="mt-2 text-xs" style={{ color: C.low }}>{storageError}</p>}
+          {directoryStorageSupported && (
+            <button
+              type="button"
+              onClick={() => void changeStorageFolder()}
+              className="mt-4 flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold"
+              style={{ borderColor: C.border, color: C.brand }}
+            >
+              <FolderOpen size={15} />
+              {storageMode === "directory" ? "저장 폴더 변경" : "저장 폴더 선택"}
+            </button>
+          )}
         </div>
         <div className="rounded-xl border p-5" style={{ background: C.panel, borderColor: C.border }}>
           <ShieldCheck size={22} style={{ color: C.brand }} />

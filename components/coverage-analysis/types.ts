@@ -1,5 +1,13 @@
 export type CoverageBand = "full" | "partial" | "low";
-export type VizMode = "gap" | "radar" | "heatmap";
+export type VizMode =
+  | "gap"
+  | "radar"
+  | "heatmap"
+  | "waterline"
+  | "triage"
+  | "rings"
+  | "dumbbell"
+  | "waffle";
 
 export interface InsurerCoverage {
   id: string;

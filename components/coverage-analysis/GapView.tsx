@@ -3,6 +3,7 @@ import Donut from "./Donut";
 import Gauge from "./Gauge";
 import { C } from "./tokens";
 import type { CoverageCategory } from "./types";
+import { CategoryAmountText } from "./CategoryAmounts";
 
 export default function GapView({ categories }: { categories: CoverageCategory[] }) {
   return (
@@ -22,6 +23,7 @@ export default function GapView({ categories }: { categories: CoverageCategory[]
                 <div className="text-xs" style={{ color: C.muted }}>
                   {category.items.length}개 담보 · 보완 {category.items.filter((item) => bandOf(item) !== "full").length}건
                 </div>
+                <CategoryAmountText category={category} />
               </div>
             </div>
             <div className="divide-y" style={{ borderColor: C.border }}>

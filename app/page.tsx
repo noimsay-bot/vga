@@ -7,7 +7,7 @@ import { C } from "@/components/coverage-analysis/tokens";
 import { useProjects } from "@/components/projects/ProjectProvider";
 
 export default function HomePage() {
-  const { projects } = useProjects();
+  const { projects, storageMode, storageFolderName } = useProjects();
   const customerProjects = [...projects].sort(
     (left, right) => right.updatedAt - left.updatedAt,
   );
@@ -41,7 +41,9 @@ export default function HomePage() {
           <div className="mt-4 font-bold">보관 중인 프로젝트</div>
           <div className="mt-1 text-3xl font-extrabold">{projects.length}</div>
           <div className="text-xs" style={{ color: C.muted }}>
-            현재 브라우저 세션의 로컬 상태
+            {storageMode === "directory"
+              ? `${storageFolderName} 폴더에 자동 저장`
+              : "로컬 저장 폴더 설정 필요"}
           </div>
         </div>
       </div>

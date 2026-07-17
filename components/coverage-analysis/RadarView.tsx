@@ -1,6 +1,7 @@
 import { scoreOf } from "./calculations";
 import { C } from "./tokens";
 import type { CoverageCategory } from "./types";
+import { CategoryAmountGrid } from "./CategoryAmounts";
 
 const CENTER_X = 260;
 const CENTER_Y = 190;
@@ -118,6 +119,7 @@ export default function RadarView({ categories }: { categories: CoverageCategory
           );
         })}
       </svg>
+      <CategoryAmountGrid categories={categories} />
     </section>
   );
 }

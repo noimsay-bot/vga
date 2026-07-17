@@ -1,9 +1,17 @@
-import { bandColor, C } from "./tokens";
+import { useState } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import CoverageLegend from "./CoverageLegend";
+import DumbbellView from "./DumbbellView";
 import GapView from "./GapView";
 import HeatmapView from "./HeatmapView";
 import InsuranceDetails from "./InsuranceDetails";
 import RadarView from "./RadarView";
-import type { CoverageBand, CoverageCategory, VizMode } from "./types";
+import RingsView from "./RingsView";
+import TriageView from "./TriageView";
+import WaterlineView from "./WaterlineView";
+import WaffleView from "./WaffleView";
+import { C } from "./tokens";
+import type { CoverageCategory, VizMode } from "./types";
 
 interface PreviewProps {
   clientName: string;
@@ -16,17 +24,21 @@ interface PreviewProps {
   onCustomerModeChange: (enabled: boolean) => void;
 }
 
-const LEGEND: Array<[CoverageBand, string]> = [
-  ["full", "충분 · 100% 이상"],
-  ["partial", "부족 · 30% 이상"],
-  ["low", "미흡 · 30% 미만"],
-];
-
-const MODES: Array<[VizMode, string]> = [
+const PRIMARY_MODES: Array<[VizMode, string]> = [
   ["gap", "갭 바"],
   ["radar", "레이더"],
-  ["heatmap", "히트맵"],
+  ["waterline", "보장 수위"],
+  ["waffle", "블록 미터"],
 ];
+
+const MORE_MODES: Array<[VizMode, string]> = [
+  ["heatmap", "히트맵"],
+  ["triage", "우선순위"],
+  ["rings", "동심원"],
+  ["dumbbell", "목표 격차"],
+];
+
+const ALL_MODES = [...PRIMARY_MODES, ...MORE_MODES];
 
 export default function Preview({
   clientName,
@@ -38,50 +50,66 @@ export default function Preview({
   onVizModesChange,
   onCustomerModeChange,
 }: PreviewProps) {
-  const selectedModes = MODES.filter(([mode]) => vizModes.includes(mode));
+  const [moreOpen, setMoreOpen] = useState(false);
+  const selectedModes = ALL_MODES.filter(([mode]) => vizModes.includes(mode));
+  const selectedMoreCount = MORE_MODES.filter(([mode]) => vizModes.includes(mode)).length;
 
   const toggleMode = (mode: VizMode, enabled: boolean) => {
     onVizModesChange(
-      MODES.map(([candidate]) => candidate).filter((candidate) =>
+      ALL_MODES.map(([candidate]) => candidate).filter((candidate) =>
         candidate === mode ? enabled : vizModes.includes(candidate),
       ),
     );
   };
 
+  const renderModeChoices = (modes: Array<[VizMode, string]>) =>
+    modes.map(([mode, label]) => {
+      const selected = vizModes.includes(mode);
+      return (
+        <label
+          key={mode}
+          className="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold"
+          style={
+            selected
+              ? { background: "#EAF1F0", borderColor: C.brand, color: C.brand }
+              : { background: C.panel, borderColor: C.border, color: C.muted }
+          }
+        >
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={(event) => toggleMode(mode, event.target.checked)}
+            style={{ accentColor: C.brand }}
+          />
+          {label}
+        </label>
+      );
+    });
+
   return (
     <>
-      <div className="no-print mb-5 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-        <fieldset>
+      <div className="no-print mb-5 flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+        <fieldset className="min-w-0 flex-1">
           <legend className="mb-1.5 text-xs font-semibold" style={{ color: C.muted }}>
             출력할 시각화
           </legend>
-          <div className="flex flex-wrap gap-2">
-            {MODES.map(([mode, label]) => {
-              const selected = vizModes.includes(mode);
-              return (
-                <label
-                  key={mode}
-                  className="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold"
-                  style={
-                    selected
-                      ? { background: "#EAF1F0", borderColor: C.brand, color: C.brand }
-                      : { background: C.panel, borderColor: C.border, color: C.muted }
-                  }
-                >
-                  <input
-                    type="checkbox"
-                    checked={selected}
-                    onChange={(event) => toggleMode(mode, event.target.checked)}
-                    style={{ accentColor: C.brand }}
-                  />
-                  {label}
-                </label>
-              );
-            })}
-          </div>
+          <div className="flex flex-wrap gap-2">{renderModeChoices(PRIMARY_MODES)}</div>
+          <button
+            type="button"
+            onClick={() => setMoreOpen((current) => !current)}
+            className="mt-2 flex items-center gap-1 text-xs font-semibold"
+            style={{ color: C.brand }}
+            aria-expanded={moreOpen}
+          >
+            {moreOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            더보기{selectedMoreCount ? ` · ${selectedMoreCount}개 선택` : ""}
+          </button>
+          {moreOpen && (
+            <div className="mt-2 flex flex-wrap gap-2">{renderModeChoices(MORE_MODES)}</div>
+          )}
         </fieldset>
 
-        <label className="flex cursor-pointer items-center justify-between gap-3 text-xs font-semibold xl:justify-start">
+        <label className="flex cursor-pointer items-center justify-between gap-3 text-xs font-semibold xl:mt-6 xl:justify-start">
           <span>
             고객 노출 모드
             <span className="ml-1 font-normal" style={{ color: C.muted }}>
@@ -150,7 +178,13 @@ export default function Preview({
                 {mode === "gap" && <GapView categories={categories} />}
                 {mode === "radar" &&
                   (radarUnavailable ? <GapView categories={categories} /> : <RadarView categories={categories} />)}
+                {mode === "waterline" && <WaterlineView categories={categories} />}
+                {mode === "waffle" && <WaffleView categories={categories} />}
                 {mode === "heatmap" && <HeatmapView categories={categories} />}
+                {mode === "triage" && <TriageView categories={categories} />}
+                {mode === "rings" && <RingsView categories={categories} />}
+                {mode === "dumbbell" && <DumbbellView categories={categories} />}
+                <CoverageLegend />
               </section>
             );
           })}
@@ -191,18 +225,10 @@ function ReportHeader({
           {asOf}
         </span>
       </div>
-      <p className="mb-4 text-xs" style={{ color: C.muted }}>
+      <p className="text-xs" style={{ color: C.muted }}>
         총 {categories.reduce((sum, category) => sum + category.items.length, 0)}개 담보 · 보완 필요 {totalShort}건
         <span className="ml-1">(단위: 만원)</span>
       </p>
-      <div className="flex flex-wrap gap-4 text-xs">
-        {LEGEND.map(([band, text]) => (
-          <div key={band} className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full" style={{ background: bandColor(band) }} />
-            <span style={{ color: C.muted }}>{text}</span>
-          </div>
-        ))}
-      </div>
     </header>
   );
 }

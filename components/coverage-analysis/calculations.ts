@@ -28,3 +28,15 @@ export const scoreOf = (category: CoverageCategory) =>
 
 export const scoreBand = (score: number): CoverageBand =>
   score >= 60 ? "full" : score >= 35 ? "partial" : "low";
+
+export const categoryAmounts = (category: CoverageCategory) =>
+  category.items.reduce(
+    (totals, item) => {
+      const held = heldOf(item);
+      totals.needed += item.needed || 0;
+      totals.held += held;
+      totals.shortage += Math.max((item.needed || 0) - held, 0);
+      return totals;
+    },
+    { needed: 0, held: 0, shortage: 0 },
+  );

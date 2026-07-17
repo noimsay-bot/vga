@@ -2,6 +2,7 @@ import { bandOf, scoreOf } from "./calculations";
 import Donut from "./Donut";
 import { bandColor, C } from "./tokens";
 import type { CoverageCategory } from "./types";
+import { CategoryAmountText } from "./CategoryAmounts";
 
 export default function HeatmapView({ categories }: { categories: CoverageCategory[] }) {
   return (
@@ -20,6 +21,7 @@ export default function HeatmapView({ categories }: { categories: CoverageCatego
                 <div className="text-xs" style={{ color: C.muted }}>
                   {category.items.length}개 담보
                 </div>
+                <CategoryAmountText category={category} />
               </div>
             </div>
             <div className="flex flex-1 flex-wrap gap-2">
