@@ -44,17 +44,34 @@ interface ProjectContextValue {
 
 const ProjectContext = createContext<ProjectContextValue | null>(null);
 const subscribeDirectorySupport = () => () => undefined;
+const VALID_VIZ_MODES = new Set<VizMode>([
+  "gap",
+  "radar",
+  "heatmap",
+  "waterline",
+  "triage",
+  "rings",
+  "dumbbell",
+  "waffle",
+  "treemap",
+  "speedometer",
+  "brickwall",
+  "moneyunits",
+  "reportcard",
+]);
 
-const migrateProject = (project: LegacyCoverageProject): CoverageProject => {
+export const migrateProject = (project: LegacyCoverageProject): CoverageProject => {
   const legacyMode = project.vizMode;
-  const vizModes: VizMode[] = project.vizModes?.length
-    ? project.vizModes
+  const vizModes: VizMode[] = Array.isArray(project.vizModes)
+    ? project.vizModes.filter((mode) => VALID_VIZ_MODES.has(mode))
     : legacyMode
-      ? [legacyMode]
+      ? VALID_VIZ_MODES.has(legacyMode)
+        ? [legacyMode]
+        : ["radar", "waterline"]
       : ["radar", "waterline"];
   const { vizMode: _legacyVizMode, ...rest } = project;
   void _legacyVizMode;
-  return { ...rest, vizModes };
+  return { ...rest, vizModes, showItemDetail: project.showItemDetail ?? true };
 };
 
 const buildInitialProjects = (): CoverageProject[] => [
@@ -64,6 +81,7 @@ const buildInitialProjects = (): CoverageProject[] => [
     asOf: "2026.07.14",
     categories: buildFromSeed(),
     vizModes: ["radar", "waterline"],
+    showItemDetail: true,
     customerMode: true,
     updatedAt: Date.now(),
   }),
@@ -201,6 +219,7 @@ export default function ProjectProvider({ children }: { children: ReactNode }) {
         asOf: "",
         categories: [],
         vizModes: ["radar", "waterline"],
+        showItemDetail: true,
         customerMode: true,
         updatedAt: Date.now(),
       },

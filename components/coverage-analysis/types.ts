@@ -7,7 +7,12 @@ export type VizMode =
   | "triage"
   | "rings"
   | "dumbbell"
-  | "waffle";
+  | "waffle"
+  | "treemap"
+  | "speedometer"
+  | "brickwall"
+  | "moneyunits"
+  | "reportcard";
 
 export interface InsurerCoverage {
   id: string;
@@ -35,13 +40,15 @@ export interface CoverageProject {
   asOf: string;
   categories: CoverageCategory[];
   vizModes: VizMode[];
+  showItemDetail: boolean;
   customerMode: boolean;
   updatedAt: number;
 }
 
-export type LegacyCoverageProject = Omit<CoverageProject, "vizModes"> & {
+export type LegacyCoverageProject = Omit<CoverageProject, "vizModes" | "showItemDetail"> & {
   vizMode?: VizMode;
   vizModes?: VizMode[];
+  showItemDetail?: boolean;
 };
 
 export interface SeedInsurerCoverage {

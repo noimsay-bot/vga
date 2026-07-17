@@ -299,8 +299,10 @@ function ProjectEditor({
             categories={project.categories}
             totalShort={totalShort}
             vizModes={project.vizModes}
+            showItemDetail={project.showItemDetail}
             customerMode={project.customerMode}
             onVizModesChange={(vizModes) => patchProject({ vizModes })}
+            onShowItemDetailChange={(showItemDetail) => patchProject({ showItemDetail })}
             onCustomerModeChange={(customerMode) => patchProject({ customerMode })}
           />
         </div>

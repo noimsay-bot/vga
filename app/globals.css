@@ -33,7 +33,13 @@ button {
   }
 
   .gap-category-print,
-  .gap-item-print {
+  .gap-item-print,
+  .item-detail-category-print,
+  .item-detail-row-print,
+  .brick-category-print,
+  .brick-print,
+  .money-unit-row-print,
+  .report-card-print {
     break-inside: avoid;
     page-break-inside: avoid;
   }

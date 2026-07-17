@@ -1,15 +1,22 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import CoverageLegend from "./CoverageLegend";
+import BrickWallView from "./BrickWallView";
 import DumbbellView from "./DumbbellView";
 import GapView from "./GapView";
 import HeatmapView from "./HeatmapView";
 import InsuranceDetails from "./InsuranceDetails";
+import ItemDetailPanel from "./ItemDetailPanel";
+import MoneyUnitsView from "./MoneyUnitsView";
 import RadarView from "./RadarView";
 import RingsView from "./RingsView";
+import ReportCardView from "./ReportCardView";
+import SpeedometerView from "./SpeedometerView";
 import TriageView from "./TriageView";
+import TreemapView from "./TreemapView";
 import WaterlineView from "./WaterlineView";
 import WaffleView from "./WaffleView";
+import { scoreOf } from "./calculations";
 import { C } from "./tokens";
 import type { CoverageCategory, VizMode } from "./types";
 
@@ -19,8 +26,10 @@ interface PreviewProps {
   categories: CoverageCategory[];
   totalShort: number;
   vizModes: VizMode[];
+  showItemDetail: boolean;
   customerMode: boolean;
   onVizModesChange: (modes: VizMode[]) => void;
+  onShowItemDetailChange: (enabled: boolean) => void;
   onCustomerModeChange: (enabled: boolean) => void;
 }
 
@@ -29,6 +38,8 @@ const PRIMARY_MODES: Array<[VizMode, string]> = [
   ["radar", "레이더"],
   ["waterline", "보장 수위"],
   ["waffle", "블록 미터"],
+  ["treemap", "트리맵"],
+  ["reportcard", "진단 리포트"],
 ];
 
 const MORE_MODES: Array<[VizMode, string]> = [
@@ -36,9 +47,23 @@ const MORE_MODES: Array<[VizMode, string]> = [
   ["triage", "우선순위"],
   ["rings", "동심원"],
   ["dumbbell", "목표 격차"],
+  ["speedometer", "스피드미터"],
+  ["brickwall", "벽돌 담장"],
+  ["moneyunits", "금액 유닛"],
 ];
 
 const ALL_MODES = [...PRIMARY_MODES, ...MORE_MODES];
+const DETAIL_MODES = new Set<VizMode>([
+  "radar",
+  "waterline",
+  "triage",
+  "rings",
+  "dumbbell",
+  "waffle",
+  "speedometer",
+  "moneyunits",
+  "reportcard",
+]);
 
 export default function Preview({
   clientName,
@@ -46,8 +71,10 @@ export default function Preview({
   categories,
   totalShort,
   vizModes,
+  showItemDetail,
   customerMode,
   onVizModesChange,
+  onShowItemDetailChange,
   onCustomerModeChange,
 }: PreviewProps) {
   const [moreOpen, setMoreOpen] = useState(false);
@@ -109,30 +136,20 @@ export default function Preview({
           )}
         </fieldset>
 
-        <label className="flex cursor-pointer items-center justify-between gap-3 text-xs font-semibold xl:mt-6 xl:justify-start">
-          <span>
-            고객 노출 모드
-            <span className="ml-1 font-normal" style={{ color: C.muted }}>
-              보험사/상품명 숨김
-            </span>
-          </span>
-          <input
-            type="checkbox"
-            className="sr-only"
-            checked={customerMode}
-            onChange={(event) => onCustomerModeChange(event.target.checked)}
+        <div className="space-y-2 xl:mt-6">
+          <PreviewSwitch
+            label="세부 담보 표시"
+            hint="종합 점수형 자료"
+            checked={showItemDetail}
+            onChange={onShowItemDetailChange}
           />
-          <span
-            className="relative h-6 w-11 rounded-full transition-colors"
-            style={{ background: customerMode ? C.brand : C.track }}
-            aria-hidden="true"
-          >
-            <span
-              className="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform"
-              style={{ left: 2, transform: `translateX(${customerMode ? 20 : 0}px)` }}
-            />
-          </span>
-        </label>
+          <PreviewSwitch
+            label="고객 노출 모드"
+            hint="보험사/상품명 숨김"
+            checked={customerMode}
+            onChange={onCustomerModeChange}
+          />
+        </div>
       </div>
 
       {categories.length === 0 ? (
@@ -154,6 +171,12 @@ export default function Preview({
           {selectedModes.map(([mode], index) => {
             const radarUnavailable = mode === "radar" && categories.length < 3;
             const breakAfter = index < selectedModes.length - 1;
+            const detailCategories =
+              mode === "triage"
+                ? [...categories].sort((left, right) => scoreOf(left) - scoreOf(right))
+                : categories;
+            const renderItemDetail =
+              showItemDetail && DETAIL_MODES.has(mode) && !radarUnavailable;
             return (
               <section
                 key={mode}
@@ -183,7 +206,13 @@ export default function Preview({
                 {mode === "triage" && <TriageView categories={categories} />}
                 {mode === "rings" && <RingsView categories={categories} />}
                 {mode === "dumbbell" && <DumbbellView categories={categories} />}
-                <CoverageLegend />
+                {mode === "treemap" && <TreemapView categories={categories} />}
+                {mode === "speedometer" && <SpeedometerView categories={categories} />}
+                {mode === "brickwall" && <BrickWallView categories={categories} />}
+                {mode === "moneyunits" && <MoneyUnitsView categories={categories} />}
+                {mode === "reportcard" && <ReportCardView categories={categories} />}
+                {renderItemDetail && <ItemDetailPanel categories={detailCategories} />}
+                {mode !== "brickwall" && <CoverageLegend />}
               </section>
             );
           })}
@@ -191,6 +220,45 @@ export default function Preview({
         </div>
       )}
     </>
+  );
+}
+
+function PreviewSwitch({
+  label,
+  hint,
+  checked,
+  onChange,
+}: {
+  label: string;
+  hint: string;
+  checked: boolean;
+  onChange: (enabled: boolean) => void;
+}) {
+  return (
+    <label className="flex cursor-pointer items-center justify-between gap-3 text-xs font-semibold xl:justify-start">
+      <span>
+        {label}
+        <span className="ml-1 font-normal" style={{ color: C.muted }}>
+          {hint}
+        </span>
+      </span>
+      <input
+        type="checkbox"
+        className="sr-only"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+      />
+      <span
+        className="relative h-6 w-11 shrink-0 rounded-full transition-colors"
+        style={{ background: checked ? C.brand : C.track }}
+        aria-hidden="true"
+      >
+        <span
+          className="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform"
+          style={{ left: 2, transform: `translateX(${checked ? 20 : 0}px)` }}
+        />
+      </span>
+    </label>
   );
 }
 
