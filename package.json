@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "test:excel-import": "tsx scripts/test-excel-import.ts",
-    "test:visualization-amounts": "tsx scripts/test-visualization-amounts.tsx"
+    "test:visualization-amounts": "node --require ./scripts/register-css.cjs --import tsx scripts/test-visualization-amounts.tsx"
   },
   "dependencies": {
     "lucide-react": "1.24.0",

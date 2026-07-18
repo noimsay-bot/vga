@@ -1,18 +1,23 @@
 import { scoreBand, scoreOf } from "./calculations";
 import { bandColor, C } from "./tokens";
+import { REPORT_DESIGN, reportBandGradient } from "./reportDesign";
+import styles from "./ReportDesign.module.css";
 import type { CoverageCategory } from "./types";
 import { CategoryAmountText } from "./CategoryAmounts";
 
 export default function WaterlineView({ categories }: { categories: CoverageCategory[] }) {
   return (
     <section
-      className="rounded-xl border p-4"
-      style={{ borderColor: C.border, background: C.panel }}
+      className={`p-4 sm:p-5 ${styles.sectionCard}`}
       aria-label="카테고리별 보장 수위"
     >
-      <div className="mb-4 flex items-center gap-2 text-xs font-semibold" style={{ color: C.muted }}>
-        <span className="inline-block w-8 border-t border-dashed" style={{ borderColor: C.muted }} />
-        필요 100%
+      <div
+        className="mb-5 grid items-center gap-3 text-xs font-semibold"
+        style={{ color: C.muted, gridTemplateColumns: "1fr auto 1fr" }}
+      >
+        <span className={styles.referenceLine} />
+        <span>필요 100%</span>
+        <span className={styles.referenceLine} />
       </div>
       <div
         className="grid gap-4"
@@ -26,16 +31,15 @@ export default function WaterlineView({ categories }: { categories: CoverageCate
           return (
             <div key={category.id} className="min-w-0 text-center">
               <div
-                className="relative mx-auto h-52 w-full max-w-24 overflow-hidden rounded-b-xl border"
-                style={{ background: C.track, borderColor: C.border }}
+                className={`mx-auto h-52 w-full max-w-24 ${styles.waterTrack} ${score === 0 ? styles.waterZero : ""}`}
               >
                 <div
                   className="absolute inset-x-0 top-0 border-t border-dashed"
-                  style={{ borderColor: C.muted }}
+                  style={{ borderColor: REPORT_DESIGN.faint }}
                 />
                 <div
-                  className="absolute inset-x-0 bottom-0"
-                  style={{ height: `${fillHeight}%`, background: color }}
+                  className={styles.waterFill}
+                  style={{ height: `${fillHeight}%`, background: reportBandGradient(scoreBand(score)) }}
                 >
                   {score > 0 && (
                     <div
@@ -44,14 +48,16 @@ export default function WaterlineView({ categories }: { categories: CoverageCate
                     />
                   )}
                 </div>
+                {score === 0 && <span className={styles.zeroStub} aria-hidden="true" />}
                 <span
                   className="absolute left-0 right-0 text-center text-sm font-extrabold"
                   style={{
                     bottom: `${scoreBottom}%`,
-                    color: score >= 18 ? C.panel : C.ink,
+                    zIndex: 3,
+                    color: score === 0 ? C.low : score >= 18 ? C.panel : C.ink,
                   }}
                 >
-                  {score}
+                  {score}점
                 </span>
               </div>
               <div className="mt-2 break-keep text-xs font-semibold">{category.name}</div>

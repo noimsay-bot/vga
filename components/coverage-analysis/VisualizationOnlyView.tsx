@@ -34,7 +34,7 @@ export default function VisualizationOnlyView({ projectId }: { projectId: string
   return (
     <div style={{ background: C.bg, minHeight: "100vh" }}>
       <style>{`
-        @page { size: A4; margin: 12mm; }
+        @page { size: A4; margin: 0; }
         @media print {
           .no-print { display: none !important; }
           main { padding-left: 0 !important; padding-bottom: 0 !important; }

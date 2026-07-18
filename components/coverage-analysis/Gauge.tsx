@@ -1,5 +1,7 @@
 import { bandOf, fmt, heldOf } from "./calculations";
 import { bandColor, C } from "./tokens";
+import { reportBandGradient } from "./reportDesign";
+import styles from "./ReportDesign.module.css";
 import type { CoverageItem } from "./types";
 
 interface GaugeProps {
@@ -10,37 +12,42 @@ export default function Gauge({ item }: GaugeProps) {
   const held = heldOf(item);
   const band = bandOf(item);
   const color = bandColor(band);
-  const percentage =
-    item.needed > 0 ? Math.min(held / item.needed, 1) * 100 : held > 0 ? 100 : 3;
+  const percentage = item.needed > 0 ? Math.min(held / item.needed, 1) * 100 : held > 0 ? 100 : 0;
   const shortage = Math.max(item.needed - held, 0);
+  const isEmpty = held === 0;
 
   return (
-    <div className="gap-item-print py-1.5">
-      <div className="flex items-baseline justify-between mb-1">
-        <span className="text-sm" style={{ color: C.ink }}>
+    <div className="gap-item-print py-3">
+      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <span className="text-sm font-semibold" style={{ color: isEmpty ? C.low : C.ink }}>
           {item.name}
         </span>
         <span className="text-xs tabular-nums" style={{ color: C.muted }}>
           <b style={{ color: C.ink }}>{fmt(held)}</b> / {fmt(item.needed)}만원
         </span>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="grid items-center gap-3 sm:grid-cols-[minmax(0,1fr)_112px]">
         <div
-          className="relative h-2 flex-1 overflow-hidden rounded-full border"
-          style={{ background: C.panel, borderColor: C.border }}
+          className={`${styles.track} ${styles.gapTrack} ${isEmpty ? styles.zeroTrack : ""}`}
         >
-          <div
-            className="absolute inset-y-0 left-0 rounded-l-full"
-            style={{
-              width: `${percentage}%`,
-              background: color,
-              transition: "width .35s ease",
-            }}
-          />
+          {isEmpty ? (
+            <>
+              <span className={styles.zeroStub} aria-hidden="true" />
+              <span className={styles.zeroMessage}>미보유 · 전액 부족</span>
+            </>
+          ) : (
+            <div
+              className={styles.fill}
+              style={{
+                width: `${percentage}%`,
+                background: reportBandGradient(band),
+              }}
+            />
+          )}
         </div>
         <span
-          className="text-[11px] font-semibold w-24 text-right tabular-nums"
-          style={{ color: shortage > 0 ? C.low : C.full }}
+          className="text-right text-xs font-semibold tabular-nums"
+          style={{ color: shortage > 0 ? (isEmpty ? C.low : color) : C.full }}
         >
           {shortage > 0 ? `${fmt(shortage)}만원 부족` : "충분"}
         </span>

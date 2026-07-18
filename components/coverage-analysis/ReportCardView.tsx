@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { CategoryAmountText } from "./CategoryAmounts";
 import { scoreBand, scoreOf } from "./calculations";
 import { bandColor, C } from "./tokens";
+import { REPORT_DESIGN, reportBandGradient, reportBandGradientStops } from "./reportDesign";
+import styles from "./ReportDesign.module.css";
 import type { CoverageBand, CoverageCategory } from "./types";
 
 const STAMP: Record<CoverageBand, string> = {
@@ -16,16 +18,25 @@ function ReportDonut({ score, band }: { score: number; band: CoverageBand }) {
   const radius = 31;
   const circumference = 2 * Math.PI * radius;
   const color = bandColor(band);
+  const gradientId = `report-donut-${useId().replace(/:/g, "")}`;
+  const [start, end] = reportBandGradientStops(band);
   return (
     <svg width="82" height="82" viewBox="0 0 82 82" role="img" aria-label={`${score}%`}>
+      <defs>
+        <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor={start} />
+          <stop offset="100%" stopColor={end} />
+        </linearGradient>
+      </defs>
       <circle cx="41" cy="41" r={radius} fill="none" stroke={C.track} strokeWidth="8" />
+      <circle cx="41" cy="41" r={radius} fill="none" stroke={C.border} strokeWidth="8" strokeDasharray="0.5 5" opacity="0.7" />
       {score > 0 && (
         <circle
           cx="41"
           cy="41"
           r={radius}
           fill="none"
-          stroke={color}
+          stroke={`url(#${gradientId})`}
           strokeWidth="8"
           strokeLinecap="round"
           strokeDasharray={circumference}
@@ -57,8 +68,11 @@ export default function ReportCardView({ categories }: { categories: CoverageCat
   return (
     <section data-branding-visible={showBranding ? "true" : "false"}>
       <div
-        className="mb-4 flex flex-wrap items-center justify-between gap-4 rounded-xl p-5 text-white"
-        style={{ background: C.brand }}
+        className="mb-5 flex flex-wrap items-center justify-between gap-4 rounded-2xl p-5 text-white"
+        style={{
+          background: REPORT_SUMMARY_GRADIENT,
+          boxShadow: REPORT_DESIGN.brandPanelShadow,
+        }}
       >
         <div>
           <div className="text-sm font-bold">보장 종합 진단</div>
@@ -87,8 +101,8 @@ export default function ReportCardView({ categories }: { categories: CoverageCat
           return (
             <article
               key={category.id}
-              className="report-card-print rounded-xl border p-4"
-              style={{ background: C.panel, borderColor: band === "low" ? C.low : C.border }}
+              className={`report-card-print p-4 ${styles.sectionCard}`}
+              style={{ borderColor: band === "low" ? C.low : undefined }}
             >
               <div className="flex items-start justify-between gap-2">
                 <div>
@@ -99,7 +113,7 @@ export default function ReportCardView({ categories }: { categories: CoverageCat
                 </div>
                 <span
                   className="rounded-md px-2 py-1 text-xs font-extrabold"
-                  style={{ background: `${color}26`, color }}
+                  style={{ background: `${color}26`, color, boxShadow: "inset 0 1px 0 rgba(255,255,255,.7)" }}
                 >
                   {STAMP[band]}
                 </span>
@@ -114,8 +128,8 @@ export default function ReportCardView({ categories }: { categories: CoverageCat
 
         {showBranding && (
           <article
-            className="report-card-print flex min-h-48 flex-col items-center justify-center rounded-xl border-2 border-dashed p-5 text-center"
-            style={{ background: C.panel, borderColor: C.border, color: C.muted }}
+            className="report-card-print flex min-h-48 flex-col items-center justify-center rounded-2xl border-2 border-dashed p-5 text-center"
+            style={{ borderColor: C.border, color: C.muted }}
             data-branding-card
           >
             <div className="font-bold" style={{ color: C.ink }}>설계사 정보</div>
@@ -129,3 +143,5 @@ export default function ReportCardView({ categories }: { categories: CoverageCat
     </section>
   );
 }
+
+const REPORT_SUMMARY_GRADIENT = reportBandGradient("full");

@@ -11,6 +11,12 @@ import MoneyUnitsView from "./MoneyUnitsView";
 import RadarView from "./RadarView";
 import RingsView from "./RingsView";
 import ReportCardView from "./ReportCardView";
+import {
+  ReportDesignFooter,
+  ReportDesignHeader,
+  type ReskinnedReportMode,
+} from "./ReportChrome";
+import reportStyles from "./ReportDesign.module.css";
 import SpeedometerView from "./SpeedometerView";
 import TriageView from "./TriageView";
 import TreemapView from "./TreemapView";
@@ -64,6 +70,8 @@ const DETAIL_MODES = new Set<VizMode>([
   "moneyunits",
   "reportcard",
 ]);
+
+const RESKINNED_MODES = new Set<VizMode>(["gap", "radar", "waterline", "reportcard"]);
 
 export default function Preview({
   clientName,
@@ -177,18 +185,9 @@ export default function Preview({
                 : categories;
             const renderItemDetail =
               showItemDetail && DETAIL_MODES.has(mode) && !radarUnavailable;
-            return (
-              <section
-                key={mode}
-                className={`visualization-sheet ${breakAfter ? "print-break-after-page" : ""}`}
-                data-viz-mode={mode}
-              >
-                <ReportHeader
-                  clientName={clientName}
-                  asOf={asOf}
-                  categories={categories}
-                  totalShort={totalShort}
-                />
+            const reskinned = RESKINNED_MODES.has(mode);
+            const visualization = (
+              <>
                 {radarUnavailable && (
                   <div
                     className="mb-4 rounded-lg border px-3 py-2 text-xs"
@@ -212,7 +211,39 @@ export default function Preview({
                 {mode === "moneyunits" && <MoneyUnitsView categories={categories} />}
                 {mode === "reportcard" && <ReportCardView categories={categories} />}
                 {renderItemDetail && <ItemDetailPanel categories={detailCategories} />}
-                {mode !== "brickwall" && <CoverageLegend />}
+              </>
+            );
+            return (
+              <section
+                key={mode}
+                className={`visualization-sheet ${breakAfter ? "print-break-after-page" : ""}`}
+                data-viz-mode={mode}
+              >
+                {reskinned ? (
+                  <div className={reportStyles.backdrop}>
+                    <div className={reportStyles.paper}>
+                      <ReportDesignHeader
+                        mode={mode as ReskinnedReportMode}
+                        clientName={clientName}
+                        asOf={asOf}
+                        categories={categories}
+                      />
+                      <div className={reportStyles.content}>{visualization}</div>
+                      <ReportDesignFooter />
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <ReportHeader
+                      clientName={clientName}
+                      asOf={asOf}
+                      categories={categories}
+                      totalShort={totalShort}
+                    />
+                    {visualization}
+                    {mode !== "brickwall" && <CoverageLegend />}
+                  </>
+                )}
               </section>
             );
           })}

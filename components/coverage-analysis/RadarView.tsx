@@ -1,7 +1,10 @@
-import { scoreOf } from "./calculations";
-import { C } from "./tokens";
+import { useId } from "react";
+import { scoreBand, scoreOf } from "./calculations";
+import { bandColor, C } from "./tokens";
 import type { CoverageCategory } from "./types";
 import { CategoryAmountGrid } from "./CategoryAmounts";
+import styles from "./ReportDesign.module.css";
+import { REPORT_DESIGN } from "./reportDesign";
 
 const CENTER_X = 260;
 const CENTER_Y = 190;
@@ -24,14 +27,14 @@ export default function RadarView({ categories }: { categories: CoverageCategory
   const outerPoints = categories.map((_, index) => pointAt(index, count, RADIUS));
   const middlePoints = categories.map((_, index) => pointAt(index, count, RADIUS * 0.5));
   const values = categories.map((category) => scoreOf(category));
+  const fillId = `radar-fill-${useId().replace(/:/g, "")}`;
   const valuePoints = values.map((score, index) =>
     pointAt(index, count, RADIUS * (score / 100)),
   );
 
   return (
     <section
-      className="rounded-xl border p-4"
-      style={{ borderColor: C.border, background: C.panel }}
+      className={`p-4 sm:p-5 ${styles.sectionCard}`}
     >
       <div className="mb-2 text-center">
         <div className="text-xs" style={{ color: C.muted }}>
@@ -44,6 +47,12 @@ export default function RadarView({ categories }: { categories: CoverageCategory
         role="img"
         aria-label={`카테고리별 보장 점수 레이더: ${categories.map((category, index) => `${category.name} ${values[index]}점`).join(", ")}`}
       >
+        <defs>
+          <radialGradient id={fillId} cx="50%" cy="46%" r="60%">
+            <stop offset="0%" stopColor={REPORT_DESIGN.bandGradientStops.full[0]} stopOpacity="0.26" />
+            <stop offset="100%" stopColor={REPORT_DESIGN.bandGradientStops.full[1]} stopOpacity="0.1" />
+          </radialGradient>
+        </defs>
         <polygon
           points={pointsString(outerPoints)}
           fill="none"
@@ -77,9 +86,8 @@ export default function RadarView({ categories }: { categories: CoverageCategory
 
         <polygon
           points={pointsString(valuePoints)}
-          fill={C.full}
-          fillOpacity="0.22"
-          stroke={C.full}
+          fill={`url(#${fillId})`}
+          stroke={C.brand}
           strokeWidth="2.5"
           strokeLinejoin="round"
         />
@@ -90,7 +98,7 @@ export default function RadarView({ categories }: { categories: CoverageCategory
             cx={point.x}
             cy={point.y}
             r="4"
-            fill={C.full}
+            fill={bandColor(scoreBand(values[index]))}
             stroke={C.panel}
             strokeWidth="2"
           />
@@ -107,11 +115,12 @@ export default function RadarView({ categories }: { categories: CoverageCategory
               textAnchor={anchor}
               dominantBaseline="middle"
               fontSize="12"
-              fontWeight="700"
+              fontWeight="600"
               fill={C.ink}
+              fontFamily="Pretendard"
             >
               <tspan x={label.x} dy="0">{category.name}</tspan>
-              <tspan x={label.x} dy="15" fontSize="10" fontWeight="500" fill={C.muted}>
+              <tspan x={label.x} dy="15" fontSize="10" fontWeight="500" fill={bandColor(scoreBand(values[index]))}>
                 {values[index]}점
               </tspan>
             </text>

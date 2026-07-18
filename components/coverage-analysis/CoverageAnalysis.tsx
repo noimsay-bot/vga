@@ -194,7 +194,7 @@ function ProjectEditor({
   return (
     <div style={{ background: C.bg, color: C.ink, minHeight: "100vh" }} className="w-full">
       <style>{`
-        @page { size: A4; margin: 12mm; }
+        @page { size: A4; margin: 0; }
         @media print {
           .no-print { display: none !important; }
           .print-full { display: block !important; width: 100% !important; padding: 0 !important; }
