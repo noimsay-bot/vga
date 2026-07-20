@@ -71,4 +71,31 @@ assert.equal(parsedCsv.groups[0].category, "CSV보장");
 assert.equal(parsedCsv.groups[0].needed, 1500);
 assert.equal(parsedCsv.groups[0].heldManual, 250);
 
-console.log("XLSX/XLS/CSV parse, grouping, validation, and merge checks passed.");
+const productCoverageHtml = `
+<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head>
+<meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8">
+</head><body><table border="0" cellspacing="0"<tr>
+<td>구분</td><td></td><td>가입회사명</td><td></td><td></td><td>보험사A</td><td>보험사B</td></tr>
+<tr><td></td><td></td><td>가입상품명</td><td></td><td></td><td>상품A</td><td>상품B</td></tr>
+<tr><td>가입담보</td><td></td><td>표준금액</td><td>가입합계</td><td>준비</td><td>가입금액</td><td>가입금액</td></tr>
+<tr><td rowspan="2">가족보장</td><td>테스트사망</td><td>1,000</td><td>600</td><td>△</td><td>400</td><td>200</td></tr>
+<tr><td>테스트후유장해</td><td>500</td><td>250</td><td>△</td><td>0</td><td>250</td></tr>
+<tr><td>기타보장</td><td>수동합계담보</td><td>300</td><td>100</td><td>△</td><td>0</td><td>0</td></tr>
+</table></body></html>`;
+const parsedProductCoverage = parseCoverageWorkbook(
+  new TextEncoder().encode(productCoverageHtml).buffer,
+);
+assert.equal(parsedProductCoverage.headerErrors.length, 0);
+assert.equal(parsedProductCoverage.rows.length, 3);
+assert.equal(parsedProductCoverage.groups.length, 3);
+assert.equal(parsedProductCoverage.groups[0].category, "가족보장");
+assert.equal(parsedProductCoverage.groups[0].insurers.length, 2);
+assert.equal(
+  parsedProductCoverage.groups[0].insurers.reduce((sum, insurer) => sum + insurer.amount, 0),
+  600,
+);
+assert.match(parsedProductCoverage.groups[0].insurers[0].name, /보험사A · 상품A/);
+assert.equal(parsedProductCoverage.groups[2].heldManual, 100);
+assert.equal(parsedProductCoverage.groups[2].insurers.length, 0);
+
+console.log("XLSX/XLS/CSV/HTML-XLS parse, grouping, validation, and merge checks passed.");

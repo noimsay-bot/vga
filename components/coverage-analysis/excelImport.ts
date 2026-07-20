@@ -48,6 +48,8 @@ export interface ImportMergeResult {
 
 const textOf = (value: unknown) => String(value ?? "").trim();
 
+type WorkbookMatrix = unknown[][];
+
 const amountOf = (
   value: unknown,
   label: string,
@@ -67,63 +69,7 @@ const amountOf = (
   return amount;
 };
 
-export function parseCoverageWorkbook(data: ArrayBuffer): ParsedCoverageWorkbook {
-  const workbook = XLSX.read(data, { type: "array", codepage: 65001 });
-  const firstSheetName = workbook.SheetNames[0];
-  if (!firstSheetName) {
-    return { rows: [], groups: [], headerErrors: ["워크시트가 없습니다."] };
-  }
-
-  const sheet = workbook.Sheets[firstSheetName];
-  const matrix = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
-    header: 1,
-    defval: "",
-    raw: true,
-  });
-  const headers = (matrix[0] ?? []).map(textOf);
-  const headerErrors = REQUIRED_HEADERS.filter((header) => !headers.includes(header)).map(
-    (header) => `필수 헤더 '${header}'가 없습니다.`,
-  );
-  if (headerErrors.length) return { rows: [], groups: [], headerErrors };
-
-  const indexOf = (header: string) => headers.indexOf(header);
-  const rows: UploadPreviewRow[] = matrix.slice(1).flatMap((values, rowIndex) => {
-    const hasValue = values.some((value) => textOf(value) !== "");
-    if (!hasValue) return [];
-
-    const errors: string[] = [];
-    const category = textOf(values[indexOf("카테고리")]);
-    const name = textOf(values[indexOf("담보명")]);
-    if (!category) errors.push("카테고리 필수값 누락");
-    if (!name) errors.push("담보명 필수값 누락");
-
-    const needed = amountOf(values[indexOf("필요보장")], "필요보장", true, errors);
-    const heldManual = amountOf(values[indexOf("보유")], "보유", false, errors);
-    const insurerName = textOf(values[indexOf("보험사")]);
-    const insurerAmount = amountOf(
-      values[indexOf("보험사금액")],
-      "보험사금액",
-      false,
-      errors,
-    );
-    if (!insurerName && insurerAmount !== null) {
-      errors.push("보험사 없이 보험사금액 입력");
-    }
-
-    return [
-      {
-        rowNumber: rowIndex + 2,
-        category,
-        name,
-        needed,
-        heldManual,
-        insurerName,
-        insurerAmount,
-        errors,
-      },
-    ];
-  });
-
+const groupsFromRows = (rows: UploadPreviewRow[]) => {
   const grouped = new Map<string, ImportedCoverageGroup>();
   for (const row of rows) {
     if (row.errors.length || row.needed === null) continue;
@@ -148,11 +94,192 @@ export function parseCoverageWorkbook(data: ArrayBuffer): ParsedCoverageWorkbook
     }
   }
 
-  const groups = Array.from(grouped.values()).map((group) => ({
+  return Array.from(grouped.values()).map((group) => ({
     ...group,
     heldManual: group.insurers.length ? 0 : group.heldManual,
   }));
+};
+
+const findHeaderRow = (matrix: WorkbookMatrix, required: readonly string[]) =>
+  matrix.findIndex((row) => {
+    const values = row.map(textOf);
+    return required.every((header) => values.includes(header));
+  });
+
+const readCoverageWorkbook = (data: ArrayBuffer) => {
+  try {
+    return XLSX.read(data, { type: "array", codepage: 65001 });
+  } catch (originalError) {
+    const html = new TextDecoder("utf-8").decode(new Uint8Array(data));
+    if (!/<html[\s>]/i.test(html) || !/<table\b/i.test(html)) throw originalError;
+
+    // 일부 보험 비교 시스템은 실제 Excel 대신 HTML을 .xls로 저장하며
+    // 첫 table 태그의 닫는 꺾쇠를 누락한다. 원본 파일은 건드리지 않고
+    // 파싱용 문자열에서 그 한 지점만 보정한다.
+    const repairedHtml = html.replace(
+      /(<table\b[^>]*?)"\s*(<tr\b)/i,
+      (_match, tableStart: string, firstRow: string) => `${tableStart}">${firstRow}`,
+    );
+    return XLSX.read(repairedHtml, { type: "string", codepage: 65001 });
+  }
+};
+
+const parseStandardMatrix = (
+  matrix: WorkbookMatrix,
+  headerRowIndex: number,
+): ParsedCoverageWorkbook => {
+  const headers = matrix[headerRowIndex].map(textOf);
+  const indexOf = (header: string) => headers.indexOf(header);
+  const rows: UploadPreviewRow[] = matrix.slice(headerRowIndex + 1).flatMap((values, rowIndex) => {
+    const hasValue = values.some((value) => textOf(value) !== "");
+    if (!hasValue) return [];
+
+    const errors: string[] = [];
+    const category = textOf(values[indexOf("카테고리")]);
+    const name = textOf(values[indexOf("담보명")]);
+    if (!category) errors.push("카테고리 필수값 누락");
+    if (!name) errors.push("담보명 필수값 누락");
+
+    const needed = amountOf(values[indexOf("필요보장")], "필요보장", true, errors);
+    const heldManual = amountOf(values[indexOf("보유")], "보유", false, errors);
+    const insurerName = textOf(values[indexOf("보험사")]);
+    const insurerAmount = amountOf(
+      values[indexOf("보험사금액")],
+      "보험사금액",
+      false,
+      errors,
+    );
+    if (!insurerName && insurerAmount !== null) {
+      errors.push("보험사 없이 보험사금액 입력");
+    }
+
+    return [
+      {
+        rowNumber: headerRowIndex + rowIndex + 2,
+        category,
+        name,
+        needed,
+        heldManual,
+        insurerName,
+        insurerAmount,
+        errors,
+      },
+    ];
+  });
+
+  return { rows, groups: groupsFromRows(rows), headerErrors: [] };
+};
+
+const parseProductCoverageMatrix = (
+  matrix: WorkbookMatrix,
+  headerRowIndex: number,
+): ParsedCoverageWorkbook => {
+  const headers = matrix[headerRowIndex].map(textOf);
+  const categoryIndex = headers.indexOf("가입담보");
+  const itemIndex = categoryIndex + 1;
+  const neededIndex = headers.indexOf("표준금액");
+  const heldIndex = headers.indexOf("가입합계");
+  const insurerStartIndex = headers.indexOf("가입금액");
+  const companyRow = matrix.find((row, index) =>
+    index < headerRowIndex && row.map(textOf).includes("가입회사명"),
+  ) ?? [];
+  const productRow = matrix.find((row, index) =>
+    index < headerRowIndex && row.map(textOf).includes("가입상품명"),
+  ) ?? [];
+
+  let currentCategory = "";
+  const rows: UploadPreviewRow[] = [];
+  const groups: ImportedCoverageGroup[] = [];
+
+  matrix.slice(headerRowIndex + 1).forEach((values, rowIndex) => {
+    const categoryCell = textOf(values[categoryIndex]);
+    if (categoryCell) currentCategory = categoryCell;
+    const name = textOf(values[itemIndex]);
+    if (!name && !values.some((value) => textOf(value))) return;
+
+    const errors: string[] = [];
+    if (!currentCategory) errors.push("카테고리 필수값 누락");
+    if (!name) errors.push("담보명 필수값 누락");
+    const needed = amountOf(values[neededIndex], "필요보장", true, errors);
+    const heldTotal = amountOf(values[heldIndex], "보유", false, errors) ?? 0;
+    const insurers: Array<{ name: string; amount: number }> = [];
+
+    if (insurerStartIndex >= 0) {
+      for (let column = insurerStartIndex; column < values.length; column += 1) {
+        const amountErrors: string[] = [];
+        const amount = amountOf(values[column], "보험사금액", false, amountErrors);
+        if (amountErrors.length) errors.push(...amountErrors);
+        if (!amount) continue;
+
+        const company = textOf(companyRow[column]);
+        const product = textOf(productRow[column]);
+        if (!company) {
+          errors.push("보험사 없이 보험사금액 입력");
+          continue;
+        }
+        insurers.push({
+          name: product ? `${company} · ${product}` : company,
+          amount,
+        });
+      }
+    }
+
+    const insurerSum = insurers.reduce((sum, insurer) => sum + insurer.amount, 0);
+    const useInsurers = insurers.length > 0 && insurerSum === heldTotal;
+    const rowNumber = headerRowIndex + rowIndex + 2;
+    rows.push({
+      rowNumber,
+      category: currentCategory,
+      name,
+      needed,
+      heldManual: useInsurers ? 0 : heldTotal,
+      insurerName: useInsurers ? insurers.map((insurer) => insurer.name).join(", ") : "",
+      insurerAmount: useInsurers ? insurerSum : null,
+      errors,
+    });
+
+    if (!errors.length && needed !== null) {
+      groups.push({
+        category: currentCategory,
+        name,
+        needed,
+        heldManual: useInsurers ? 0 : heldTotal,
+        insurers: useInsurers ? insurers : [],
+        sourceRows: [rowNumber],
+      });
+    }
+  });
+
   return { rows, groups, headerErrors: [] };
+};
+
+export function parseCoverageWorkbook(data: ArrayBuffer): ParsedCoverageWorkbook {
+  const workbook = readCoverageWorkbook(data);
+  const firstSheetName = workbook.SheetNames[0];
+  if (!firstSheetName) {
+    return { rows: [], groups: [], headerErrors: ["워크시트가 없습니다."] };
+  }
+
+  const sheet = workbook.Sheets[firstSheetName];
+  const matrix = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
+    header: 1,
+    defval: "",
+    raw: true,
+  });
+  const standardHeaderRow = findHeaderRow(matrix, REQUIRED_HEADERS);
+  if (standardHeaderRow >= 0) return parseStandardMatrix(matrix, standardHeaderRow);
+
+  const productCoverageHeaderRow = findHeaderRow(matrix, [
+    "가입담보",
+    "표준금액",
+    "가입합계",
+  ]);
+  if (productCoverageHeaderRow >= 0) {
+    return parseProductCoverageMatrix(matrix, productCoverageHeaderRow);
+  }
+
+  const headerErrors = REQUIRED_HEADERS.map((header) => `필수 헤더 '${header}'가 없습니다.`);
+  return { rows: [], groups: [], headerErrors };
 }
 
 export function mergeImportedCoverages(
