@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Printer, RotateCcw } from "lucide-react";
 import { bandOf } from "./calculations";
+import { normalizeCoverageOrder } from "./coverageOrder";
+import { instantiateCategoryTemplate, mergeCategoryTemplate } from "./categoryTemplates";
 import EditorPanel from "./EditorPanel";
 import Preview from "./Preview";
 import { mergeImportedCoverages, type ImportedCoverageGroup } from "./excelImport";
@@ -11,6 +13,8 @@ import { buildFromSeed, uid } from "./seed";
 import { C } from "./tokens";
 import { useProjects } from "@/components/projects/ProjectProvider";
 import type { FavoriteCoverage } from "./useCoverageFavorites";
+import type { CategoryTemplate } from "./categoryTemplateRepository";
+import type { TemplateApplyMode } from "./TemplateMenu";
 import type {
   CoverageCategory,
   CoverageItem,
@@ -59,9 +63,18 @@ function ProjectEditor({
   mobileView,
   onMobileViewChange,
 }: ProjectEditorProps) {
+  const [highlightedItemIds, setHighlightedItemIds] = useState<Set<string>>(() => new Set());
+  const orderedCategories = useMemo(
+    () => normalizeCoverageOrder(project.categories),
+    [project.categories],
+  );
   const setCategories = (
     update: (categories: CoverageCategory[]) => CoverageCategory[],
-  ) => updateProject((current) => ({ ...current, categories: update(current.categories) }));
+  ) =>
+    updateProject((current) => ({
+      ...current,
+      categories: normalizeCoverageOrder(update(normalizeCoverageOrder(current.categories))),
+    }));
 
   const patchProject = (patch: Partial<CoverageProject>) =>
     updateProject((current) => ({ ...current, ...patch }));
@@ -73,7 +86,7 @@ function ProjectEditor({
       ),
     );
 
-  const patchItem = (categoryId: string, itemId: string, patch: Partial<CoverageItem>) =>
+  const patchItem = (categoryId: string, itemId: string, patch: Partial<CoverageItem>) => {
     setCategories((current) =>
       current.map((category) =>
         category.id !== categoryId
@@ -86,6 +99,14 @@ function ProjectEditor({
             },
       ),
     );
+    if (Object.hasOwn(patch, "heldManual")) {
+      setHighlightedItemIds((current) => {
+        const next = new Set(current);
+        next.delete(itemId);
+        return next;
+      });
+    }
+  };
 
   const addCategory = () =>
     setCategories((current) => [...current, { id: uid(), name: "새 보장", items: [] }]);
@@ -143,12 +164,12 @@ function ProjectEditor({
 
   const totalShort = useMemo(
     () =>
-      project.categories.reduce(
+      orderedCategories.reduce(
         (sum, category) =>
           sum + category.items.filter((item) => bandOf(item) !== "full").length,
         0,
       ),
-    [project.categories],
+    [orderedCategories],
   );
 
   const loadSample = () => {
@@ -156,14 +177,14 @@ function ProjectEditor({
       patchProject({
         clientName: "정철원",
         asOf: "2026.07.14",
-        categories: buildFromSeed(),
+        categories: normalizeCoverageOrder(buildFromSeed()),
       });
     }
   };
 
   const importGroups = (groups: ImportedCoverageGroup[]) => {
-    const result = mergeImportedCoverages(project.categories, groups);
-    patchProject({ categories: result.categories });
+    const result = mergeImportedCoverages(orderedCategories, groups);
+    patchProject({ categories: normalizeCoverageOrder(result.categories) });
     return {
       addedItems: result.addedItems,
       createdCategories: result.createdCategories,
@@ -172,7 +193,7 @@ function ProjectEditor({
   };
 
   const addFavoriteItems = (categoryId: string, favorites: FavoriteCoverage[]) => {
-    const category = project.categories.find((candidate) => candidate.id === categoryId);
+    const category = orderedCategories.find((candidate) => candidate.id === categoryId);
     if (!category) return { added: 0, skipped: favorites.length };
     const existingNames = new Set(category.items.map((item) => item.name));
     const additions = favorites.filter((favorite) => !existingNames.has(favorite.name));
@@ -190,6 +211,26 @@ function ProjectEditor({
     });
     return { added: additions.length, skipped: favorites.length - additions.length };
   };
+
+  const applyTemplate = (template: CategoryTemplate, mode: TemplateApplyMode) => {
+    if (mode === "replace") {
+      const result = instantiateCategoryTemplate(template);
+      patchProject({ categories: result.categories });
+      setHighlightedItemIds(new Set(result.itemIds));
+      return [];
+    }
+    const result = mergeCategoryTemplate(orderedCategories, template);
+    patchProject({ categories: result.categories });
+    setHighlightedItemIds(new Set(result.itemIds));
+    return result.warnings;
+  };
+
+  const clearAmountHighlight = (itemId: string) =>
+    setHighlightedItemIds((current) => {
+      const next = new Set(current);
+      next.delete(itemId);
+      return next;
+    });
 
   return (
     <div style={{ background: C.bg, color: C.ink, minHeight: "100vh" }} className="w-full">
@@ -258,7 +299,8 @@ function ProjectEditor({
           <EditorPanel
             clientName={project.clientName}
             asOf={project.asOf}
-            categories={project.categories}
+            categories={orderedCategories}
+            highlightedItemIds={highlightedItemIds}
             onClientNameChange={(clientName) => patchProject({ clientName })}
             onAsOfChange={(asOf) => patchProject({ asOf })}
             onCategoryNameChange={(categoryId, value) => patchCategory(categoryId, { name: value })}
@@ -267,19 +309,20 @@ function ProjectEditor({
             onAddItem={addItem}
             onItemChange={patchItem}
             onDeleteItem={deleteItem}
-            onAddInsurer={(categoryId, itemId) =>
+            onAddInsurer={(categoryId, itemId) => {
               patchInsurers(categoryId, itemId, (insurers) => [
                 ...insurers,
                 { id: uid(), name: "", amount: 0 },
-              ])
-            }
-            onEditInsurer={(categoryId, itemId, insurerId, patch) =>
+              ]);
+            }}
+            onEditInsurer={(categoryId, itemId, insurerId, patch) => {
+              if (Object.hasOwn(patch, "amount")) clearAmountHighlight(itemId);
               patchInsurers(categoryId, itemId, (insurers) =>
                 insurers.map((insurer) =>
                   insurer.id === insurerId ? { ...insurer, ...patch } : insurer,
                 ),
-              )
-            }
+              );
+            }}
             onDeleteInsurer={(categoryId, itemId, insurerId) =>
               patchInsurers(categoryId, itemId, (insurers) =>
                 insurers.filter((insurer) => insurer.id !== insurerId),
@@ -287,6 +330,8 @@ function ProjectEditor({
             }
             onImportGroups={importGroups}
             onAddFavoriteItems={addFavoriteItems}
+            onCategoriesChange={(categories) => setCategories(() => categories)}
+            onApplyTemplate={applyTemplate}
           />
         </div>
 
@@ -296,7 +341,7 @@ function ProjectEditor({
           <Preview
             clientName={project.clientName}
             asOf={project.asOf}
-            categories={project.categories}
+            categories={orderedCategories}
             totalShort={totalShort}
             vizModes={project.vizModes}
             showItemDetail={project.showItemDetail}

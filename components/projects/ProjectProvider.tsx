@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { buildFromSeed, uid } from "@/components/coverage-analysis/seed";
+import { normalizeCoverageOrder } from "@/components/coverage-analysis/coverageOrder";
 import StorageSetupModal from "@/components/projects/StorageSetupModal";
 import {
   chooseDirectory,
@@ -24,6 +25,7 @@ import {
 } from "@/components/projects/projectStorage";
 import type {
   CoverageProject,
+  CoverageCategory,
   LegacyCoverageProject,
   VizMode,
 } from "@/components/coverage-analysis/types";
@@ -34,7 +36,7 @@ interface ProjectContextValue {
   storageFolderName: string;
   storageError: string;
   directoryStorageSupported: boolean;
-  createProject: () => string;
+  createProject: (categories?: CoverageCategory[]) => string;
   updateProject: (
     projectId: string,
     update: (project: CoverageProject) => CoverageProject,
@@ -71,7 +73,12 @@ export const migrateProject = (project: LegacyCoverageProject): CoverageProject 
       : ["radar", "waterline"];
   const { vizMode: _legacyVizMode, ...rest } = project;
   void _legacyVizMode;
-  return { ...rest, vizModes, showItemDetail: project.showItemDetail ?? true };
+  return {
+    ...rest,
+    categories: normalizeCoverageOrder(project.categories),
+    vizModes,
+    showItemDetail: project.showItemDetail ?? true,
+  };
 };
 
 const buildInitialProjects = (): CoverageProject[] => [
@@ -210,14 +217,14 @@ export default function ProjectProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const createProject = () => {
+  const createProject = (categories: CoverageCategory[] = []) => {
     const projectId = uid();
     setProjects((current) => [
       {
         id: projectId,
         clientName: "",
         asOf: "",
-        categories: [],
+        categories: normalizeCoverageOrder(categories),
         vizModes: ["radar", "waterline"],
         showItemDetail: true,
         customerMode: true,

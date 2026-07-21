@@ -26,12 +26,14 @@ export interface CoverageItem {
   needed: number;
   heldManual: number;
   insurers: InsurerCoverage[];
+  order?: number;
 }
 
 export interface CoverageCategory {
   id: string;
   name: string;
   items: CoverageItem[];
+  order?: number;
 }
 
 export interface CoverageProject {

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowLeft, Pencil, Printer } from "lucide-react";
 import { bandOf } from "./calculations";
+import { normalizeCoverageOrder } from "./coverageOrder";
 import Preview from "./Preview";
 import { C } from "./tokens";
 import { useProjects } from "@/components/projects/ProjectProvider";
@@ -22,7 +23,8 @@ export default function VisualizationOnlyView({ projectId }: { projectId: string
     );
   }
 
-  const totalShort = project.categories.reduce(
+  const orderedCategories = normalizeCoverageOrder(project.categories);
+  const totalShort = orderedCategories.reduce(
     (sum, category) =>
       sum + category.items.filter((item) => bandOf(item) !== "full").length,
     0,
@@ -73,7 +75,7 @@ export default function VisualizationOnlyView({ projectId }: { projectId: string
         <Preview
           clientName={project.clientName}
           asOf={project.asOf}
-          categories={project.categories}
+          categories={orderedCategories}
           totalShort={totalShort}
           vizModes={project.vizModes}
           showItemDetail={project.showItemDetail}
