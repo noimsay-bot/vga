@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FileStack, Plus, X } from "lucide-react";
+import { FileStack, Plus, Trash2, X } from "lucide-react";
 import { bandOf } from "@/components/coverage-analysis/calculations";
 import { instantiateCategoryTemplate } from "@/components/coverage-analysis/categoryTemplates";
 import { C } from "@/components/coverage-analysis/tokens";
@@ -12,7 +12,7 @@ import { useState } from "react";
 
 export default function ProjectListPage() {
   const router = useRouter();
-  const { projects, createProject } = useProjects();
+  const { projects, createProject, deleteProject } = useProjects();
   const { templates } = useCategoryTemplates();
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
@@ -21,6 +21,17 @@ export default function ProjectListPage() {
     const template = templates.find((candidate) => candidate.id === templateId);
     const projectId = createProject(template ? instantiateCategoryTemplate(template).categories : undefined);
     router.push(`/input/${projectId}`);
+  };
+
+  const handleDeleteProject = (projectId: string, clientName: string) => {
+    const displayName = clientName.trim() || "이름 없는 고객";
+    if (
+      window.confirm(
+        `'${displayName}' 고객 프로젝트를 삭제할까요?\n삭제한 프로젝트는 복구할 수 없습니다.`,
+      )
+    ) {
+      deleteProject(projectId);
+    }
   };
 
   return (
@@ -58,25 +69,36 @@ export default function ProjectListPage() {
             0,
           );
           return (
-            <Link
+            <div
               key={project.id}
-              href={`/input/${project.id}`}
-              className="min-h-36 rounded-xl border p-5 transition-shadow hover:shadow-sm"
+              className="relative min-h-36 rounded-xl border transition-shadow hover:shadow-sm"
               style={{ background: C.panel, borderColor: C.border }}
             >
-              <div className="text-lg font-bold">{project.clientName || "이름 없는 고객"}</div>
-              <div className="mt-5 flex flex-wrap gap-2 text-xs">
-                <span className="rounded-full px-2.5 py-1" style={{ background: C.track, color: C.muted }}>
-                  담보 {itemCount}개
-                </span>
-                <span
-                  className="rounded-full px-2.5 py-1"
-                  style={{ background: `${shortCount ? C.low : C.full}18`, color: shortCount ? C.low : C.full }}
-                >
-                  보완 필요 {shortCount}건
-                </span>
-              </div>
-            </Link>
+              <Link href={`/input/${project.id}`} className="block min-h-36 p-5 pr-14">
+                <div className="text-lg font-bold">{project.clientName || "이름 없는 고객"}</div>
+                <div className="mt-5 flex flex-wrap gap-2 text-xs">
+                  <span className="rounded-full px-2.5 py-1" style={{ background: C.track, color: C.muted }}>
+                    담보 {itemCount}개
+                  </span>
+                  <span
+                    className="rounded-full px-2.5 py-1"
+                    style={{ background: `${shortCount ? C.low : C.full}18`, color: shortCount ? C.low : C.full }}
+                  >
+                    보완 필요 {shortCount}건
+                  </span>
+                </div>
+              </Link>
+              <button
+                type="button"
+                onClick={() => handleDeleteProject(project.id, project.clientName)}
+                className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full border opacity-70 transition-opacity hover:opacity-100 focus-visible:opacity-100"
+                style={{ borderColor: C.border, background: C.panel, color: C.low }}
+                aria-label={`${project.clientName || "이름 없는 고객"} 프로젝트 삭제`}
+                title="고객 프로젝트 삭제"
+              >
+                <Trash2 size={15} />
+              </button>
+            </div>
           );
         })}
       </div>

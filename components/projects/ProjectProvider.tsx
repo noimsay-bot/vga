@@ -37,6 +37,7 @@ interface ProjectContextValue {
   storageError: string;
   directoryStorageSupported: boolean;
   createProject: (categories?: CoverageCategory[]) => string;
+  deleteProject: (projectId: string) => void;
   updateProject: (
     projectId: string,
     update: (project: CoverageProject) => CoverageProject,
@@ -247,6 +248,9 @@ export default function ProjectProvider({ children }: { children: ReactNode }) {
       ),
     );
 
+  const deleteProject = (projectId: string) =>
+    setProjects((current) => current.filter((project) => project.id !== projectId));
+
   return (
     <ProjectContext.Provider
       value={{
@@ -256,6 +260,7 @@ export default function ProjectProvider({ children }: { children: ReactNode }) {
         storageError,
         directoryStorageSupported,
         createProject,
+        deleteProject,
         updateProject,
         changeStorageFolder,
       }}
