@@ -183,21 +183,25 @@ export const SEED: SeedCoverageCategory[] = [
   },
 ];
 
-let id = 1;
+let fallbackId = 1;
 
-export const uid = () => `k${id++}`;
+export const uid = () => {
+  const randomUuid = globalThis.crypto?.randomUUID?.();
+  if (randomUuid) return `id-${randomUuid}`;
+  return `id-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}-${fallbackId++}`;
+};
 
 export const buildFromSeed = (): CoverageCategory[] =>
-  SEED.map((category) => ({
-    id: uid(),
+  SEED.map((category, categoryIndex) => ({
+    id: `seed-category-${categoryIndex}`,
     name: category.cat,
-    items: category.items.map((item) => ({
-      id: uid(),
+    items: category.items.map((item, itemIndex) => ({
+      id: `seed-item-${categoryIndex}-${itemIndex}`,
       name: item.name,
       needed: item.needed,
       heldManual: item.ins.length ? 0 : item.held,
-      insurers: item.ins.map((insurer) => ({
-        id: uid(),
+      insurers: item.ins.map((insurer, insurerIndex) => ({
+        id: `seed-insurer-${categoryIndex}-${itemIndex}-${insurerIndex}`,
         name: insurer.ins,
         amount: insurer.amt,
       })),

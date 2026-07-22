@@ -12,6 +12,7 @@ import {
 import { buildFromSeed, uid } from "@/components/coverage-analysis/seed";
 import { normalizeCoverageOrder } from "@/components/coverage-analysis/coverageOrder";
 import StorageSetupModal from "@/components/projects/StorageSetupModal";
+import { repairProjectIdentities } from "@/components/projects/projectIdentity";
 import {
   chooseDirectory,
   getSavedDirectoryHandle,
@@ -112,7 +113,10 @@ export default function ProjectProvider({ children }: { children: ReactNode }) {
   const skipNextSave = useRef(true);
 
   const loadProjects = (stored: LegacyCoverageProject[] | null) => {
-    if (stored?.length) setProjects(stored.map(migrateProject));
+    if (stored) {
+      const migrated = stored.map(migrateProject);
+      setProjects(repairProjectIdentities(migrated).projects);
+    }
     skipNextSave.current = false;
     setStorageChecked(true);
     setStorageReady(true);
@@ -265,7 +269,13 @@ export default function ProjectProvider({ children }: { children: ReactNode }) {
         changeStorageFolder,
       }}
     >
-      {children}
+      {storageChecked ? (
+        children
+      ) : (
+        <div className="flex min-h-[50vh] items-center justify-center p-8 text-sm text-slate-500">
+          저장된 고객정보를 불러오는 중입니다.
+        </div>
+      )}
       {storageChecked && !storageReady && (
         <StorageSetupModal
           directorySupported={directoryStorageSupported}

@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "test:excel-import": "tsx scripts/test-excel-import.ts",
+    "test:project-identity": "tsx scripts/test-project-identity.ts",
     "test:templates-order": "tsx scripts/test-templates-order.ts",
     "test:visualization-amounts": "node --require ./scripts/register-css.cjs --import tsx scripts/test-visualization-amounts.tsx"
   },
